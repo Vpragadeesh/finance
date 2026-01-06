@@ -1,0 +1,22 @@
+SBI
+Current price - 982
+Book Value - 561
+Book Value / Current price = 0.57 
+ROCE  = 6.37 %
+ROE   = 17.3 % 
+
+IOB
+Current Price - 36.1
+Book Value - 18.1
+Book Value / Current Price = 0.50
+ROCE = 5.95 % 
+ROE  = 11.0 %
+
+UCO
+
+Current Price - 29.4
+Book Value - 25.9
+Book Value / Current Price = 0.88
+
+ROCE = 5.76 %
+ROE  = 8.38 % 
