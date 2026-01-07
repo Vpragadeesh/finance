@@ -289,6 +289,153 @@ def calculate_average_return(
     return average_return
 
 
+def calculate_coast_fire_age(
+    current_age: int,
+    retirement_age: int,
+    monthly_investment: float,
+    initial_return: float,
+    annual_return_decrease: float,
+    fire_number: float
+) -> int:
+    """
+    Calculate the age at which you can stop investing (Coast FIRE age).
+    
+    Given a monthly investment amount, finds the age when your accumulated
+    portfolio will grow to meet your FIRE number by retirement.
+    
+    Args:
+        current_age: Current age in years
+        retirement_age: Target retirement age in years
+        monthly_investment: Monthly investment amount (SIP)
+        initial_return: Initial annual return rate (as decimal)
+        annual_return_decrease: Annual decrease in return (as decimal)
+        fire_number: Target FIRE number needed
+        
+    Returns:
+        Coast FIRE age (age when you can stop investing)
+    """
+    for test_age in range(current_age, retirement_age + 1):
+        years_to_invest = test_age - current_age
+        years_to_grow_after = retirement_age - test_age
+        
+        # Calculate what you'll have accumulated by test_age
+        avg_return_phase1 = calculate_average_return(initial_return, annual_return_decrease, years_to_invest)
+        
+        # FV of annuity (monthly investments)
+        if years_to_invest == 0:
+            accumulated = 0
+        else:
+            monthly_return = avg_return_phase1 / 12
+            total_months = years_to_invest * 12
+            
+            if monthly_return == 0:
+                accumulated = monthly_investment * total_months
+            else:
+                fv_factor = ((1 + monthly_return) ** total_months - 1) / monthly_return
+                accumulated = monthly_investment * fv_factor
+        
+        # Calculate what this will grow to by retirement
+        starting_return_phase2 = max(initial_return - (years_to_invest) * annual_return_decrease, 0)
+        avg_return_phase2 = calculate_average_return(starting_return_phase2, annual_return_decrease, years_to_grow_after)
+        
+        future_value = calculate_future_value(accumulated, avg_return_phase2, years_to_grow_after)
+        
+        # Check if we've reached FIRE number
+        if future_value >= fire_number:
+            return test_age
+    
+    # If we reach here, can't achieve Coast FIRE with given investment
+    return retirement_age
+
+
+def print_coast_fire_age_report(
+    current_age: int,
+    retirement_age: int,
+    monthly_investment: float,
+    initial_return: float,
+    annual_return_decrease: float,
+    coast_fire_age: int,
+    fire_number: float
+) -> None:
+    """
+    Print report for Coast FIRE age calculation.
+    
+    Args:
+        current_age: Current age
+        retirement_age: Target retirement age
+        monthly_investment: Monthly investment amount
+        initial_return: Initial return rate
+        annual_return_decrease: Annual return decrease
+        coast_fire_age: Calculated Coast FIRE age
+        fire_number: FIRE number needed
+    """
+    print("\n" + "="*70)
+    print("COAST FIRE AGE CALCULATOR")
+    print("="*70)
+    
+    years_to_invest = coast_fire_age - current_age
+    years_to_grow_after = retirement_age - coast_fire_age
+    
+    print(f"\n📊 YOUR PARAMETERS:")
+    print(f"  • Current Age:                    {current_age} years")
+    print(f"  • Retirement Age:                 {retirement_age} years")
+    print(f"  • Monthly Investment (SIP):       {format_currency(monthly_investment)}")
+    print(f"  • Initial Annual Return:          {initial_return * 100:.2f}%")
+    print(f"  • Annual Return Decrease:         {annual_return_decrease * 100:.2f}%")
+    print(f"  • FIRE Number Required:           {format_currency(fire_number)}")
+    
+    print(f"\n🎯 RESULT:")
+    print(f"  ✅ Coast FIRE Age:                {coast_fire_age} years")
+    print(f"  ✅ Years to Invest:               {years_to_invest} years")
+    print(f"  ✅ Years to Grow (no investing):  {years_to_grow_after} years")
+    
+    print(f"\n📋 PLAN BREAKDOWN:")
+    print(f"  • Phase 1 (Investment): Age {current_age}-{coast_fire_age} ({years_to_invest} years)")
+    print(f"    → Invest {format_currency(monthly_investment)} every month")
+    
+    avg_return_phase1 = calculate_average_return(initial_return, annual_return_decrease, years_to_invest)
+    final_return_phase1 = max(initial_return - (years_to_invest - 1) * annual_return_decrease, 0)
+    
+    print(f"    → Starting Return (Age {current_age}):   {initial_return * 100:.2f}%")
+    print(f"    → Ending Return (Age {coast_fire_age}):     {final_return_phase1 * 100:.2f}%")
+    print(f"    → Average Return:              {avg_return_phase1 * 100:.2f}%")
+    
+    # Calculate accumulated amount
+    if years_to_invest == 0:
+        accumulated = 0
+    else:
+        monthly_return = avg_return_phase1 / 12
+        total_months = years_to_invest * 12
+        if monthly_return == 0:
+            accumulated = monthly_investment * total_months
+        else:
+            fv_factor = ((1 + monthly_return) ** total_months - 1) / monthly_return
+            accumulated = monthly_investment * fv_factor
+    
+    print(f"    → Accumulated by age {coast_fire_age}: {format_currency(accumulated)}")
+    
+    print(f"\n  • Phase 2 (Growth): Age {coast_fire_age}-{retirement_age} ({years_to_grow_after} years)")
+    print(f"    → Stop investing, let money grow")
+    
+    starting_return_phase2 = max(initial_return - (years_to_invest) * annual_return_decrease, 0)
+    avg_return_phase2 = calculate_average_return(starting_return_phase2, annual_return_decrease, years_to_grow_after)
+    final_return_phase2 = max(starting_return_phase2 - (years_to_grow_after - 1) * annual_return_decrease, 0)
+    
+    print(f"    → Starting Return (Age {coast_fire_age}):   {starting_return_phase2 * 100:.2f}%")
+    print(f"    → Ending Return (Age {retirement_age}):     {final_return_phase2 * 100:.2f}%")
+    print(f"    → Average Return:              {avg_return_phase2 * 100:.2f}%")
+    
+    future_value = calculate_future_value(accumulated, avg_return_phase2, years_to_grow_after)
+    print(f"    → {format_currency(accumulated)} will grow to {format_currency(future_value)}")
+    
+    print(f"\n💡 SUMMARY:")
+    print(f"  By investing ₹{monthly_investment:,.0f} per month for {years_to_invest} years,")
+    print(f"  you can achieve Coast FIRE at age {coast_fire_age}!")
+    print(f"  Then let it grow for {years_to_grow_after} more years to {format_currency(fire_number)}")
+    
+    print("\n" + "="*70 + "\n")
+
+
 def print_coast_fire_report(inputs: CoastFIREInput, result: CoastFIREResult) -> None:
     """
     Print a formatted Coast FIRE report.
@@ -340,42 +487,79 @@ def print_coast_fire_report(inputs: CoastFIREInput, result: CoastFIREResult) -> 
 
 def main() -> None:
     """
-    Main function for Coast FIRE calculation.
+    Main function for Coast FIRE calculator.
     """
     # Interactive user input
     print("\n>>> Coast FIRE Calculator")
+    print("\nChoose an option:")
+    print("1. Calculate if you've achieved Coast FIRE (with current investment)")
+    print("2. Calculate Coast FIRE age (given monthly investment)")
     
     try:
+        choice = input("\nEnter choice (1 or 2) [1]: ") or "1"
+        
         current_age = int(input("Current age [35]: ") or "35")
         retirement_age = int(input("Retirement age [60]: ") or "60")
-        current_investment = float(input("Current investment [₹250,000]: ") or "250000")
         initial_return = float(input("Expected annual return at current age (%) [7]: ") or "7") / 100
         annual_return_decrease = float(input("Annual decrease in return (%) [0.1]: ") or "0.1") / 100
         monthly_expense = float(input("Monthly expense at retirement [₹4,000]: ") or "4000")
         inflation_rate = float(input("Inflation rate (%) [3, optional]: ") or "3") / 100
         
+        # Calculate FIRE number (same for both modes)
         years_to_retirement = retirement_age - current_age
-        average_return = calculate_average_return(initial_return, annual_return_decrease, years_to_retirement)
+        annual_expense = monthly_expense * 12
+        inflation_multiplier = (1 + inflation_rate) ** years_to_retirement
+        future_annual_expense = annual_expense * inflation_multiplier
+        fire_number = future_annual_expense / 0.04
         
-        user_inputs = CoastFIREInput(
-            current_age=current_age,
-            retirement_age=retirement_age,
-            current_investment=current_investment,
-            expected_annual_return=average_return,
-            expected_monthly_expense_at_retirement=monthly_expense,
-            inflation_rate=inflation_rate
-        )
+        if choice == "1":
+            # Mode 1: Coast FIRE with current investment
+            current_investment = float(input("Current investment [₹250,000]: ") or "250000")
+            
+            average_return = calculate_average_return(initial_return, annual_return_decrease, years_to_retirement)
+            
+            user_inputs = CoastFIREInput(
+                current_age=current_age,
+                retirement_age=retirement_age,
+                current_investment=current_investment,
+                expected_annual_return=average_return,
+                expected_monthly_expense_at_retirement=monthly_expense,
+                inflation_rate=inflation_rate
+            )
+            
+            user_result = calculate_coast_fire(user_inputs)
+            print_coast_fire_report(user_inputs, user_result)
+            
+            # Show return breakdown
+            final_return = max(initial_return - (years_to_retirement - 1) * annual_return_decrease, 0)
+            print(f"📊 Return Schedule:")
+            print(f"  • Starting Return (Age {current_age}):    {initial_return * 100:.2f}%")
+            print(f"  • Ending Return (Age {retirement_age}):     {final_return * 100:.2f}%")
+            print(f"  • Average Return:                {average_return * 100:.2f}%")
+            print()
         
-        user_result = calculate_coast_fire(user_inputs)
-        print_coast_fire_report(user_inputs, user_result)
-        
-        # Show return breakdown
-        final_return = max(initial_return - (years_to_retirement - 1) * annual_return_decrease, 0)
-        print(f"📊 Return Schedule:")
-        print(f"  • Starting Return (Age {current_age}):    {initial_return * 100:.2f}%")
-        print(f"  • Ending Return (Age {retirement_age}):     {final_return * 100:.2f}%")
-        print(f"  • Average Return:                {average_return * 100:.2f}%")
-        print()
+        elif choice == "2":
+            # Mode 2: Calculate Coast FIRE age given monthly investment
+            monthly_investment = float(input("Monthly investment (SIP) [₹25,000]: ") or "25000")
+            
+            coast_fire_age = calculate_coast_fire_age(
+                current_age,
+                retirement_age,
+                monthly_investment,
+                initial_return,
+                annual_return_decrease,
+                fire_number
+            )
+            
+            print_coast_fire_age_report(
+                current_age,
+                retirement_age,
+                monthly_investment,
+                initial_return,
+                annual_return_decrease,
+                coast_fire_age,
+                fire_number
+            )
         
     except ValueError as e:
         print(f"Invalid input: {e}")
