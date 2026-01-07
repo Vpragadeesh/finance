@@ -207,11 +207,12 @@ def calculate_required_monthly_investment(
     """
     Calculate the monthly investment amount needed to reach FIRE number.
     
-    Uses Future Value of Annuity formula:
-    FV = PMT × [((1 + r)^n - 1) / r]
+    Uses Future Value of Annuity formula with ANNUAL COMPOUNDING:
+    FV = Annual_PMT × [((1 + r)^n - 1) / r]
+    Annual_PMT = Monthly_PMT × 12
     
-    Solving for PMT:
-    PMT = FV / [((1 + r)^n - 1) / r]
+    Solving for Monthly_PMT:
+    Monthly_PMT = FV / (12 × [((1 + r)^n - 1) / r])
     
     Args:
         fire_number_required: Target portfolio value (FIRE number)
@@ -224,19 +225,20 @@ def calculate_required_monthly_investment(
     if years_to_grow == 0:
         return 0.0
     
-    # Convert annual return to monthly return
-    monthly_return = annual_return / 12
-    total_months = years_to_grow * 12
-    
     # Avoid division by zero
-    if monthly_return == 0:
+    if annual_return == 0:
+        # With 0% return, simple division
+        total_months = years_to_grow * 12
         return fire_number_required / total_months
     
-    # Calculate using Future Value of Annuity formula
-    # FV = PMT × [((1 + r)^n - 1) / r]
-    # PMT = FV / [((1 + r)^n - 1) / r]
-    fv_factor = ((1 + monthly_return) ** total_months - 1) / monthly_return
-    required_monthly = fire_number_required / fv_factor
+    # Calculate using Future Value of Annuity formula with annual compounding
+    # FV = Annual_PMT × [((1 + r)^n - 1) / r]
+    # Annual_PMT = Monthly_PMT × 12
+    # So: FV = (Monthly_PMT × 12) × [((1 + r)^n - 1) / r]
+    # Monthly_PMT = FV / (12 × [((1 + r)^n - 1) / r])
+    
+    fv_factor = ((1 + annual_return) ** years_to_grow - 1) / annual_return
+    required_monthly = fire_number_required / (12 * fv_factor)
     
     return required_monthly
 
@@ -302,6 +304,7 @@ def calculate_coast_fire_age(
     
     Given a monthly investment amount, finds the age when your accumulated
     portfolio will grow to meet your FIRE number by retirement.
+    Uses ANNUAL COMPOUNDING for calculations.
     
     Args:
         current_age: Current age in years
@@ -321,18 +324,19 @@ def calculate_coast_fire_age(
         # Calculate what you'll have accumulated by test_age
         avg_return_phase1 = calculate_average_return(initial_return, annual_return_decrease, years_to_invest)
         
-        # FV of annuity (monthly investments)
+        # FV of annuity with ANNUAL compounding (monthly investments)
+        # Annual investment = monthly_investment × 12
         if years_to_invest == 0:
             accumulated = 0
         else:
-            monthly_return = avg_return_phase1 / 12
-            total_months = years_to_invest * 12
+            annual_investment = monthly_investment * 12
             
-            if monthly_return == 0:
-                accumulated = monthly_investment * total_months
+            if avg_return_phase1 == 0:
+                accumulated = annual_investment * years_to_invest
             else:
-                fv_factor = ((1 + monthly_return) ** total_months - 1) / monthly_return
-                accumulated = monthly_investment * fv_factor
+                # FV = Annual_PMT × [((1 + r)^n - 1) / r]
+                fv_factor = ((1 + avg_return_phase1) ** years_to_invest - 1) / avg_return_phase1
+                accumulated = annual_investment * fv_factor
         
         # Calculate what this will grow to by retirement
         starting_return_phase2 = max(initial_return - (years_to_invest) * annual_return_decrease, 0)
@@ -400,17 +404,18 @@ def print_coast_fire_age_report(
     print(f"    → Ending Return (Age {coast_fire_age}):     {final_return_phase1 * 100:.2f}%")
     print(f"    → Average Return:              {avg_return_phase1 * 100:.2f}%")
     
-    # Calculate accumulated amount
+    # Calculate accumulated amount with ANNUAL compounding
     if years_to_invest == 0:
         accumulated = 0
     else:
-        monthly_return = avg_return_phase1 / 12
-        total_months = years_to_invest * 12
-        if monthly_return == 0:
-            accumulated = monthly_investment * total_months
+        annual_investment = monthly_investment * 12
+        
+        if avg_return_phase1 == 0:
+            accumulated = annual_investment * years_to_invest
         else:
-            fv_factor = ((1 + monthly_return) ** total_months - 1) / monthly_return
-            accumulated = monthly_investment * fv_factor
+            # FV = Annual_PMT × [((1 + r)^n - 1) / r]
+            fv_factor = ((1 + avg_return_phase1) ** years_to_invest - 1) / avg_return_phase1
+            accumulated = annual_investment * fv_factor
     
     print(f"    → Accumulated by age {coast_fire_age}: {format_currency(accumulated)}")
     
