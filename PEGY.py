@@ -1,17 +1,11 @@
 from typing import List, Dict
+import json
+import os
+from datetime import datetime
 
 
 def calculate_pegy(pe: float, profit_growth: float, dividend_yield: float, buffer: float = 0.1):
-    """
-    Calculate PEGY ratio safely.
 
-    pe               : Price to Earnings ratio
-    profit_growth    : Profit growth percentage (e.g. 15 for 15%)
-    dividend_yield   : Dividend yield percentage (e.g. 2.5 for 2.5%)
-    buffer           : Small value to avoid division by zero
-
-    returns          : PEGY value (float) or None if invalid
-    """
     denominator = profit_growth + dividend_yield + buffer
 
     if pe <= 0 or denominator <= 0:
@@ -46,25 +40,30 @@ def calculate_pegy_for_stocks(stocks: List[Dict]):
 
 
 def main():
-    # Example stock data (replace / extend this)
-    stocks = [
-        {
-            "name": "Bank of Baroda",
-            "pe": 8.26,
-            "growth": 89.06,
-            "dividend": 2.72
-        },
-        {
-            "name": "ITC",
-            "pe": 22.50,
-            "growth": 10.20,
-            "dividend": 3.10
-        }
-        {
-            "name": 
-        }
-    ]
-
+    # Find the latest JSON output file
+    json_files = [f for f in os.listdir(".") if f.startswith("pegy_output_") and f.endswith(".json")]
+    
+    if not json_files:
+        print("No JSON file found. Please run ex.py first to generate pegy_output_YYYY-MM-DD.json")
+        return
+    
+    latest_json = sorted(json_files)[-1]
+    
+    with open(latest_json, "r") as f:
+        data = json.load(f)
+    
+    # Transform JSON data to stock format
+    stocks = []
+    for item in data:
+        if item["pe_ratio"] is not None and item["net_profit_growth_yoy"] is not None and item["dividend_yield"] is not None:
+            stocks.append({
+                "name": item["symbol"],
+                "pe": item["pe_ratio"],
+                "growth": item["net_profit_growth_yoy"],
+                "dividend": item["dividend_yield"]
+            })
+    
+    print(f"Loaded {len(stocks)} stocks from {latest_json}\n")
     calculate_pegy_for_stocks(stocks)
 
 
